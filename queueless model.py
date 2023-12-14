@@ -4,13 +4,13 @@ import time
 import matplotlib.pyplot as plt
 import functions
 import heapq
+import numpy as np
 
 time_start = time.perf_counter()
 
-totalPackets = 6
+totalPackets = 100
 
 def imitation(lambd, mu, N, R):
-	print(lambd)
 	numOfBlockages = 0
 
 	arrivalTimes = []  # time, resources spent at the time
@@ -24,40 +24,33 @@ def imitation(lambd, mu, N, R):
 	currentSpentResources = 0
 	ResourcesOtrezki = 0
 	previousTime = 0
-	nextPacketArrivalTime = functions.poisson(1, lambd)
+	nextPacketArrivalTime = np.random.exponential(1/lambd)
 	for i in range(1, totalPackets+1):
 		currentTime += nextPacketArrivalTime
 		# process the previous packets
-		print("---------------EXIT BLOCK START-------------------")
 		while (bool(exitTimes) and exitTimes[0][0] <= currentTime):
 			if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
 				currTime = arrivalTimes[0][0]
-				print(currentSpentResources, currTime, previousTime, currTime - previousTime)
 				weightedRs.append(ResourcesOtrezki * (currTime - previousTime))
 				previousTime = currTime
 				ResourcesOtrezki += heapq.heappop(arrivalTimes)[1]
 			else:
 				currTime = exitTimes[0][0]
-				print(currentSpentResources, currTime, previousTime, currTime - previousTime)
 				weightedRs.append(ResourcesOtrezki * (currTime - previousTime))
 				previousTime = currTime
 				currentSpentResources -= exitTimes[0][1]
 				ResourcesOtrezki -= heapq.heappop(exitTimes)[1]
-		print("---------------EXIT BLOCK END---------------------")
 
 		# process the current packet
 		currentPacketResourceNeeds = random.randint(1, R)
-		print(currentTime, currentPacketResourceNeeds, end=" ")
 		if (currentPacketResourceNeeds + currentSpentResources <= R and len(exitTimes) + 1 <= N):
-			currentPacketServicingTime = functions.exponential(i, mu)
+			currentPacketServicingTime = np.random.exponential(1/mu)
 			heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, currentPacketResourceNeeds])
 			heapq.heappush(arrivalTimes, [currentTime, currentPacketResourceNeeds])
 			currentSpentResources += currentPacketResourceNeeds
-			print(currentPacketServicingTime, currentTime + currentPacketServicingTime, currentSpentResources)
 		else:
 			numOfBlockages += 1
-		print("")
-		nextPacketArrivalTime = functions.poisson(i+1, lambd)
+		nextPacketArrivalTime = np.random.exponential(1/lambd)
 
 	while (bool(exitTimes)):
 		if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
@@ -71,20 +64,16 @@ def imitation(lambd, mu, N, R):
 			previousTime = currentTime
 			ResourcesOtrezki -= heapq.heappop(exitTimes)[1]
 
-	print("")
-	print("FINISH")
-	print(sum(weightedRs) / currentTime, weightedRs, currentTime)
-	print("---------------------------------------------------------------------")
-
 	return numOfBlockages / totalPackets, sum(weightedRs) / currentTime
 
 def thousandRounds(lambd, mu, N, R, j):
 	blockageRates = []
 	avgResourcesSpentPerStep = []
-	for i in range(1):
+	for i in range(100):
 		currRound = imitation(lambd, mu, N, R)
 		blockageRates.append(currRound[0])
 		avgResourcesSpentPerStep.append(currRound[1])
+		print(i + j*1000)
 
 	return np.average(blockageRates), np.average(avgResourcesSpentPerStep) 
 
