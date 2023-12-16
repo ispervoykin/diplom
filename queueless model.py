@@ -3,11 +3,12 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import heapq
+import functions
 import numpy as np
 
 time_start = time.perf_counter()
 
-def imitation(mu, N, R, totalPackets, distribution, args):
+def imitation(lambd, mu, N, R, totalPackets, get_r):
 	numOfBlockages = 0
 
 	arrivalTimes = []  # time, resources spent at the time
@@ -21,7 +22,7 @@ def imitation(mu, N, R, totalPackets, distribution, args):
 	currentSpentResources = 0
 	prevResources = 0
 	previousTime = 0
-	nextPacketArrivalTime = distribution(*args)
+	nextPacketArrivalTime = np.random.exponential(1/lambd)
 	for i in range(1, totalPackets+1):
 		currentTime += nextPacketArrivalTime
 		# process the previous packets
@@ -39,7 +40,7 @@ def imitation(mu, N, R, totalPackets, distribution, args):
 				prevResources -= heapq.heappop(exitTimes)[1]
 
 		# process the current packet
-		currentPacketResourceNeeds = random.randint(1, R)
+		currentPacketResourceNeeds = get_r(random.random())
 		if (currentPacketResourceNeeds + currentSpentResources <= R and len(exitTimes) + 1 <= N):
 			currentPacketServicingTime = np.random.exponential(1/mu)
 			heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, currentPacketResourceNeeds])
@@ -47,7 +48,7 @@ def imitation(mu, N, R, totalPackets, distribution, args):
 			currentSpentResources += currentPacketResourceNeeds
 		else:
 			numOfBlockages += 1
-		nextPacketArrivalTime = distribution(*args)
+		nextPacketArrivalTime = np.random.exponential(1/lambd)
 
 	while (bool(exitTimes)):
 		if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
@@ -63,11 +64,11 @@ def imitation(mu, N, R, totalPackets, distribution, args):
 
 	return numOfBlockages / totalPackets, sum(weightedRs) / currentTime
 
-def thousandRounds(mu, N, R, totalPackets, j, distribution, args):
+def thousandRounds(lambd, mu, N, R, totalPackets, j, get_r):
 	blockageRates = []
 	avgResourcesSpentPerStep = []
 	for i in range(1000):
-		currRound = imitation(mu, N, R, totalPackets, distribution, args)
+		currRound = imitation(lambd, mu, N, R, totalPackets, get_r)
 		blockageRates.append(currRound[0])
 		avgResourcesSpentPerStep.append(currRound[1])
 		print(i + j*1000)
@@ -79,34 +80,26 @@ def runImitation(mu, lambdas, N, R, totalPackets, distribution):
 
 	results = []
 
-	match distribution:
-		case np.random.poisson:
-				for j, lambd in enumerate(lambdas):
-					results.append(thousandRounds(mu, N, R, totalPackets, j, np.random.poisson, [1/(lambd+1)]))
-		case np.random.geometric:
-						for j, lambd in enumerate(lambdas):
-							results.append(thousandRounds(mu, N, R, totalPackets, j, np.random.geometric, [1/(lambd+1)]))
-		case np.random.binomial:
-				for j, lambd in enumerate(lambdas):
-					results.append(thousandRounds(mu, N, R, totalPackets, j, np.random.binomial, [1, 1/(lambd+1)]))
+	for j, lambd in enumerate(lambdas):
+		results.append(thousandRounds(lambd, mu, N, R, totalPackets, j, functions.getR(lambd, R, distribution)))
 	
 	return [result[0] for result in results], [result[1] for result in results]
 
 N, R = 3, 3
 totalPackets = 1000
 mu = 1
-lambdas = np.linspace(0, 20, 1000)
+lambdas = np.linspace(0.001, 20, 1000)
 ro = lambdas / mu
 
-poissonResults = runImitation(mu, lambdas, N, R, totalPackets, np.random.poisson)
-geometricResults = runImitation(mu, lambdas, N, R, totalPackets, np.random.geometric)
-binomialResults = runImitation(mu, lambdas, N, R, totalPackets, np.random.binomial)
+poissonResults = runImitation(mu, lambdas, N, R, totalPackets, "poisson")
+geometricResults = runImitation(mu, lambdas, N, R, totalPackets, "geometric")
+binomialResults = runImitation(mu, lambdas, N, R, totalPackets, "binomial")
 
 x_ticks = np.arange(0, 21, 1)
 y_ticks = np.arange(0, 1.05, 0.05)
-plt.plot(ro, poissonResults[0], 'r', label="Пуассоновское распределение")
-plt.plot(ro, geometricResults[0], 'b', label="Геометрическое распределение")
-plt.plot(ro, binomialResults[0], 'g', label="Биномиальное распределение")
+plt.plot(ro, poissonResults[0], 'purple', label="Пуассоновское распределение")
+plt.plot(ro, geometricResults[0], 'green', label="Геометрическое распределение")
+plt.plot(ro, binomialResults[0], 'blue', label="Биномиальное распределение")
 plt.xlabel("Нагрузка ρ", fontsize=16)
 plt.ylabel("Вероятность отказа π", fontsize=16)
 plt.xticks(x_ticks)
@@ -119,9 +112,9 @@ plt.legend(fontsize=16)
 plt.show()
 
 y_ticks = np.arange(0, R + R / 20, R / 20)
-plt.plot(ro, poissonResults[1], 'r', label="Пуассоновское распределение")
-plt.plot(ro, geometricResults[1], 'b', label="Геометрическое распределение")
-plt.plot(ro, binomialResults[1], 'g', label="Биномиальное распределение")
+plt.plot(ro, poissonResults[1], 'purple', label="Пуассоновское распределение")
+plt.plot(ro, geometricResults[1], 'green', label="Геометрическое распределение")
+plt.plot(ro, binomialResults[1], 'blue', label="Биномиальное распределение")
 plt.xlabel("Нагрузка ρ", fontsize=16)
 plt.ylabel("Средний объём занятого ресурса R", fontsize=16)
 plt.xticks(x_ticks)
