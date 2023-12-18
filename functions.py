@@ -41,9 +41,13 @@ def generateBinomial(p: float, n: int, r: int) -> list[list[int], list[int]]:
 	spentResourcesProbs = []
 	for k in range(1, r+1):
 		numOfSpentResources.append(k)
-		probability = (math.factorial(n) / (math.factorial(k) * math.factorial(n-k))) * math.pow(1-p, n-k) * math.pow(p, k)
-		spentResourcesProbs.append(accumulation + probability)
-		accumulation += probability
+		if n >= k:
+			probability = (math.factorial(n) / (math.factorial(k) * math.factorial(n-k))) * math.pow(1-p, n-k) * math.pow(p, k)
+			spentResourcesProbs.append(accumulation + probability)
+			accumulation += probability
+		else:
+			spentResourcesProbs.append(1)
+
 	return numOfSpentResources, spentResourcesProbs
 
 def getR(r: int, distribution: str):
@@ -65,19 +69,20 @@ def getR(r: int, distribution: str):
 		case "poisson":
 			numOfSpentResources, spentResourcesProbs = generatePoisson(5, r)
 		case "geometric":
-			numOfSpentResources, spentResourcesProbs = generateGeometric(0.05, r)
+			numOfSpentResources, spentResourcesProbs = generateGeometric(1/r, r)
 		case "binomial":
 			numOfSpentResources, spentResourcesProbs = generateBinomial(0.6, 5, r)
 		case _:
 			print("no matching distribution found")
 			exit(-1)
 	
-	numOfSpentResources.insert(0, 0)
-	spentResourcesProbs.insert(0, 0)
 	l = len(spentResourcesProbs)
 	def inner_func(p: int) -> int:
-		#print(numOfSpentResources, spentResourcesProbs)
-		for i in range(0, l):
+		print(numOfSpentResources, spentResourcesProbs)
+		if p < spentResourcesProbs[0]:
+			return numOfSpentResources[0]
+		lastProb = spentResourcesProbs[-1]
+		for i in range(1, l):
 			if p < spentResourcesProbs[i]:
 				return numOfSpentResources[i-1]
 		return numOfSpentResources[l-1]
