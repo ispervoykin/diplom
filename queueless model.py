@@ -67,7 +67,7 @@ def imitation(lambd, mu, N, R, totalPackets, get_r):
 def thousandRounds(lambd, mu, N, R, totalPackets, j, get_r):
 	blockageRates = []
 	avgResourcesSpentPerStep = []
-	for i in range(1000):
+	for i in range(100):
 		currRound = imitation(lambd, mu, N, R, totalPackets, get_r)
 		blockageRates.append(currRound[0])
 		avgResourcesSpentPerStep.append(currRound[1])
@@ -81,12 +81,12 @@ def runImitation(mu, lambdas, N, R, totalPackets, distribution):
 	results = []
 
 	for j, lambd in enumerate(lambdas):
-		results.append(thousandRounds(lambd, mu, N, R, totalPackets, j, functions.getR(lambd, R, distribution)))
+		results.append(thousandRounds(lambd, mu, N, R, totalPackets, j, functions.getR(R, distribution)))
 	
 	return [result[0] for result in results], [result[1] for result in results]
 
 N, R = 3, 3
-totalPackets = 1000
+totalPackets = 100
 mu = 1
 lambdas = np.linspace(0.001, 20, 1000)
 ro = lambdas / mu
