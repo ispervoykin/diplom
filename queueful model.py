@@ -11,24 +11,24 @@ time_start = time.perf_counter()
 def imitation(lambd, mu, N, R, totalPackets, get_r, Q = 3):
 	numOfBlockages = 0
 
-	arrivalTimes = []  # time, resources spent at the time
-	exitTimes = []  # time, resources spent at the time
+	arrivalTimes = []  # [arrival time, resources spent]
+	exitTimes = []  # [exit time, resources spent]
 	heapq.heapify(arrivalTimes)
 	heapq.heapify(exitTimes)
 
 	weightedRs = []
-	queue = functions.Queue(Q)
+	queue = functions.Queue(Q)  # resources spent
 
 	currentTime = 0
 	currentSpentResources = 0
 	prevResources = 0
 	previousTime = 0
 	nextPacketArrivalTime = np.random.exponential(1/lambd)
-	for i in range(1, totalPackets+1):
+	for _ in range(0, totalPackets):
 		currentTime += nextPacketArrivalTime
 		# process the previous packets
-		while (bool(exitTimes) and exitTimes[0][0] <= currentTime):
-			if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
+		while len(exitTimes) > 0 and exitTimes[0][0] <= currentTime:
+			if len(arrivalTimes) > 0 and arrivalTimes[0][0] < exitTimes[0][0]:
 				currTime = arrivalTimes[0][0]
 				weightedRs.append(prevResources * (currTime - previousTime))
 				previousTime = currTime
@@ -40,26 +40,33 @@ def imitation(lambd, mu, N, R, totalPackets, get_r, Q = 3):
 				currentSpentResources -= exitTimes[0][1]
 				prevResources -= heapq.heappop(exitTimes)[1]
 
-		# pass from the queue to service
-		if (currentPacketResourceNeeds + currentSpentResources <= R and len(exitTimes) + 1 <= N):
-			currentPacketServicingTime = np.random.exponential(1/mu)
-			heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, currentPacketResourceNeeds])
-			heapq.heappush(arrivalTimes, [currentTime, currentPacketResourceNeeds])
-			currentSpentResources += currentPacketResourceNeeds
-		else:
-			numOfBlockages += 1
+				# After servicing a packet, pass another from the queue
+				if len(queue) > 0 and queue[0] + currentSpentResources <= R:
+					currentPacketServicingTime = np.random.exponential(1/mu)
+					top_element = queue.pop_front()
+					heapq.heappush(arrivalTimes, [currTime, top_element])
+					heapq.heappush(exitTimes, [currTime + currentPacketServicingTime, top_element])
+					currentSpentResources += top_element
 
+		# pass elements from the queue to service
+		while len(queue) > 0 and queue[0] + currentSpentResources <= R and len(exitTimes) < N:
+			currentPacketServicingTime = np.random.exponential(1/mu)
+			top_element = queue.pop_front()
+			heapq.heappush(arrivalTimes, [currentTime, top_element])
+			heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, top_element])
+			currentSpentResources += top_element
+			
 		# add the current packet to the queue
 		currentPacketResourceNeeds = get_r(random.random())
-		if len(queue) + 1 <= Q:
-			queue.append([currentTime, currentPacketResourceNeeds])
+		if len(queue) < Q:
+			queue.append(currentPacketResourceNeeds)
 		else:
 			numOfBlockages += 1
 
 		nextPacketArrivalTime = np.random.exponential(1/lambd)
 
-	while (bool(exitTimes)):
-		if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
+	while len(exitTimes) > 0:
+		if len(arrivalTimes) > 0 and arrivalTimes[0][0] < exitTimes[0][0]:
 			currentTime = arrivalTimes[0][0]
 			weightedRs.append(prevResources * (currentTime - previousTime))
 			previousTime = currentTime
@@ -69,6 +76,12 @@ def imitation(lambd, mu, N, R, totalPackets, get_r, Q = 3):
 			weightedRs.append(prevResources * (currentTime - previousTime))
 			previousTime = currentTime
 			prevResources -= heapq.heappop(exitTimes)[1]
+			if len(queue) > 0 and queue[0] + currentSpentResources <= R:
+				currentPacketServicingTime = np.random.exponential(1/mu)
+				top_element = queue.pop_front()
+				heapq.heappush(arrivalTimes, [currentTime, top_element])
+				heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, top_element])
+				currentSpentResources += top_element
 
 	return numOfBlockages / totalPackets, sum(weightedRs) / currentTime
 
