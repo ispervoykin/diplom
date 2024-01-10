@@ -11,8 +11,8 @@ time_start = time.perf_counter()
 def imitation(lambd, mu, N, R, totalPackets, get_r):
 	numOfBlockages = 0
 
-	arrivalTimes = []  # time, resources spent at the time
-	exitTimes = []  # time, resources spent at the time
+	arrivalTimes = []  # [arrival time, resources spent]
+	exitTimes = []  # [exit time, resources spent]
 	heapq.heapify(arrivalTimes)
 	heapq.heapify(exitTimes)
 
@@ -23,11 +23,11 @@ def imitation(lambd, mu, N, R, totalPackets, get_r):
 	prevResources = 0
 	previousTime = 0
 	nextPacketArrivalTime = np.random.exponential(1/lambd)
-	for i in range(1, totalPackets+1):
+	for _ in range(0, totalPackets):
 		currentTime += nextPacketArrivalTime
 		# process the previous packets
-		while (bool(exitTimes) and exitTimes[0][0] <= currentTime):
-			if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
+		while len(exitTimes) > 0 and exitTimes[0][0] <= currentTime:
+			if len(arrivalTimes) > 0 and arrivalTimes[0][0] < exitTimes[0][0]:
 				currTime = arrivalTimes[0][0]
 				weightedRs.append(prevResources * (currTime - previousTime))
 				previousTime = currTime
@@ -41,7 +41,7 @@ def imitation(lambd, mu, N, R, totalPackets, get_r):
 
 		# process the current packet
 		currentPacketResourceNeeds = get_r(random.random())
-		if (currentPacketResourceNeeds + currentSpentResources <= R and len(exitTimes) + 1 <= N):
+		if currentPacketResourceNeeds + currentSpentResources <= R and len(exitTimes) + 1 <= N:
 			currentPacketServicingTime = np.random.exponential(1/mu)
 			heapq.heappush(exitTimes, [currentTime + currentPacketServicingTime, currentPacketResourceNeeds])
 			heapq.heappush(arrivalTimes, [currentTime, currentPacketResourceNeeds])
@@ -50,8 +50,8 @@ def imitation(lambd, mu, N, R, totalPackets, get_r):
 			numOfBlockages += 1
 		nextPacketArrivalTime = np.random.exponential(1/lambd)
 
-	while (bool(exitTimes)):
-		if bool(arrivalTimes) and arrivalTimes[0][0] < exitTimes[0][0]:
+	while len(exitTimes) > 0:
+		if len(arrivalTimes) > 0 and arrivalTimes[0][0] < exitTimes[0][0]:
 			currentTime = arrivalTimes[0][0]
 			weightedRs.append(prevResources * (currentTime - previousTime))
 			previousTime = currentTime
