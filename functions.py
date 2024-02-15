@@ -78,7 +78,7 @@ def getR(r: int, distribution: str):
 	
 	l = len(spentResourcesProbs)
 	def inner_func(p: int) -> int:
-		print(numOfSpentResources, spentResourcesProbs)
+		#print(numOfSpentResources, spentResourcesProbs)
 		if p < spentResourcesProbs[0]:
 			return numOfSpentResources[0]
 		lastProb = spentResourcesProbs[-1]
@@ -90,19 +90,34 @@ def getR(r: int, distribution: str):
 	return inner_func
 
 class Queue():
-	q = []
-
 	def __init__(self, size) -> None:
+		self.q = []
 		self.size = size
+
+	def __getitem__(self, index):
+		return self.q[index]
+	
+	def __str__(self):
+		return str(self.q)
+	
+	def __len__(self):
+		return len(self.q)
 
 	def append(self, elem):
 		if len(self.q) < self.size:
 			self.q.append(elem)
-			return True
-		
-		return False
+	
+	def is_empty(self):
+		return len(self.q) == 0
 	
 	def pop_front(self):
+		"""Pops an element in front of the queue
+
+		Returns
+		-------
+		any
+			Popped element
+		"""
 		return self.q.pop(0)
 	
 	def get(self):
