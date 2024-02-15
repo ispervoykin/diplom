@@ -261,9 +261,9 @@ def runImitation(mu, lambdas, N, R, totalPackets, distribution, Q):
 
 N = 3
 R = 3
-ld = 5
+ld = 1
 mu = 1
-tetta = 1
+tetta = 5
 #p = [0, 0.3, 0.5, 0.2]
 p = create_distribution(R, tetta)
 
